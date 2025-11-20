@@ -1,73 +1,11 @@
 import random
 from typing import Dict, Tuple, Any, List
 from corridor import Corridor, Action
-
-# =======================
-# 1) Interface d'agent
-# =======================
-
-class BaseAgent:
-    """Interface minimale : implémente select_action(env, obs)."""
-    def __init__(self, name: str = "BaseAgent", seed: int | None = None):
-        self.name = name
-        if seed is not None:
-            random.seed(seed)
-
-    def select_action(self, env: Corridor, obs: Dict) -> Action:
-        raise NotImplementedError
-
-
-class RandomAgent(BaseAgent):
-    """Agent aléatoire : choisit uniformément une action légale."""
-    def __init__(self, name: str = "RandomAgent", seed: int | None = None):
-        super().__init__(name=name, seed=seed)
-
-    def select_action(self, env: Corridor, obs: Dict) -> Action:
-        actions = env.legal_actions()
-        if not actions:
-            # Devrait être impossible, mais on sécurise
-            raise RuntimeError("Aucune action légale disponible.")
-        return random.choice(actions)
-
-
-# Optionnel : exemple d'agent très simple basé sur une heuristique
-class GreedyPathAgent(BaseAgent):
-    """
-    Heuristique: privilégie les déplacements qui rapprochent le pion de sa ligne but.
-    Ne place des murs que très rarement (ou jamais).
-    """
-    def __init__(self, name: str = "GreedyPathAgent", wall_prob: float = 0.0, seed: int | None = None):
-        super().__init__(name=name, seed=seed)
-        self.wall_prob = wall_prob
-
-    def select_action(self, env: Corridor, obs: Dict) -> Action:
-        actions = env.legal_actions()
-        # Filtrer les déplacements
-        move_actions = [(a, dst) for (a, dst) in actions if a == "M"]
-        if not move_actions:
-            # Si aucun déplacement légal, choisir un mur légal (si présent)
-            return random.choice(actions)
-
-        me = 1 if obs["to_play"] == 1 else 2
-        target_row = env.N - 1 if me == 1 else 0
-
-        # Choisir le move qui minimise la distance (en ligne) vers la ligne cible
-        def score_move(dst: Tuple[int, int]) -> int:
-            r, c = dst
-            return abs(target_row - r)
-
-        best = min(move_actions, key=lambda x: score_move(x[1]))
-        # Optionnel: parfois poser un mur
-        if self.wall_prob > 0 and random.random() < self.wall_prob:
-            wall_actions = [(a, w) for (a, w) in actions if a == "W"]
-            if wall_actions:
-                return random.choice([("W", w) for (_, w) in wall_actions])
-
-        return ("M", best[1])
+from agents import *
 
 
 # =======================
-# 2) Boucle de partie
+# Boucle de partie
 # =======================
 
 def play_game(env: Corridor, agent1: BaseAgent, agent2: BaseAgent, render: bool = False, max_moves: int = 500) -> dict:
@@ -127,7 +65,7 @@ def evaluate(n_games: int = 50, render: bool = False):
         out = play_game(env, agent1, agent2, render=render)
         winner = out["winner"]
         if winner == 1:
-            results["P1"] += 1
+            results["P1"] += 1   
         elif winner == 2:
             results["P2"] += 1
         else:
@@ -147,7 +85,7 @@ def evaluate(n_games: int = 50, render: bool = False):
 
 if __name__ == "__main__":
     # Lancer une partie unique avec rendu:
-    play_game(Corridor(), RandomAgent(), RandomAgent(), render=True)
-
+    #play_game(Corridor(), RandomAgent(), RandomAgent(), render=True)
+    
     # Lancer une évaluation
-    # evaluate(n_games=20, render=False)
+    evaluate(n_games=20, render=False)
