@@ -2,7 +2,7 @@ import numpy as np
 import random
 from typing import Dict, Tuple, Any, List
 from corridor import Corridor, Action
-
+from collections import defaultdict
 
 # =======================
 # 1) Interface d'agent
@@ -66,16 +66,48 @@ class GreedyPathAgent(BaseAgent):
         return ("M", best[1])
     
 class SARSAAgent(BaseAgent):
-    def __init__(self, name:str = "SARSAAgent", seed: int | None = None, gamma: float = 0.99, alpha: float = 0.001, epsilon: float = 1.0,epsilon_decay: float = 0.995, min_epsilon:float = 0.05):
+    def __init__(self,encoding_function, name:str = "SARSAAgent", seed: int | None = None, gamma: float = 0.99, alpha: float = 0.001, epsilon: float = 1.0,epsilon_decay: float = 0.995, min_epsilon:float = 0.05):
         super().__init__(name=name,seed=seed)
+        self.n_actions = 7
         self.gamma = gamma
         self.alpha = alpha
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.min_epsilon = min_epsilon
-        self.actions = None
-        self.q_table = None     
-    def select_action(self,env: Corridor, obs: Dict) -> Action:
-        pass
+        self.actions = range(self.n_actions)
+        self.q_table = defaultdict(lambda:np.zeros(self.n_actions,dtype=float))
+        self.encoding_state = encoding_function
+    def get_strategic_walls(self,env:Corridor,obs:Dict,radius:int=2)->List[Action]:
+        """ Retourne trois actions de type 'wall' qui cerne le pion adverse"""
+        player = int(obs['to_play'])
+        opp = env.opponent_pawn(player)
+        orow, ocol = opp
+        legal_walls = set(env.legal_walls(player)) 
+        candidates = []
+
+        for dr in range(-radius,radius+1):
+            for dc in range(-radius,radius+1):
+                for ori in ("H","V"):
+                    r = orow + dr
+                    c = ocol + dc
+                    if not (0<= r<env.N -1 and 0<=c<env.N-1):
+                        continue
+                    wall = ("W",(r,c,ori))
+                    if wall not in legal_walls:
+                        continue
+                    dist = abs(dr) + abs(dc)
+                    candidates.append((dist,wall))
+          
+        candidates.sort(key=lambda x:x[0])
+        return [wall for _,wall in candidates[:3]]
+    def select_action(self,env: Corridor, obs: Dict,state) -> Action:
+        if np.random.uniform() < self.epsilon:
+            action = random.choice(self.actions)
+        else:
+            encoded_state = self.encoding_state(state)
+            action = np.argmax(self.q_table[encoded_state])
+        self.epsilon = max(self.min_epsilon,self.epsilon*self.epsilon_decay)
+        return action
+    
     def update(self, state, action, reward, next_state, done):
         pass

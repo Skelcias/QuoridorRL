@@ -3,7 +3,21 @@ from typing import Dict, Tuple, Any, List
 from corridor import Corridor, Action
 from agents import *
 
-
+# =======================
+# Env 
+# =======================
+def state_to_key_compact(obs:Dict,normalize_pov:bool=False)-> Tuple:
+    p1r, p1c = obs['p1']
+    p2r, p2c = obs['p2']
+    w1 = int(obs['walls_left'][1])
+    w2 = int(obs['walls_left'][2])
+    to_play = int(obs['to_play'])
+    if normalize_pov and to_play == 2:
+        # swap so the player to play is always first
+        p1r, p1c, p2r, p2c = p2r, p2c, p1r, p1c
+        w1, w2 = w2, w1
+        to_play = 1
+    return (p1r, p1c, p2r, p2c, w1, w2, to_play)
 # =======================
 # Boucle de partie
 # =======================
@@ -89,3 +103,7 @@ if __name__ == "__main__":
     
     # Lancer une évaluation
     evaluate(n_games=20, render=False)
+    #env = Corridor(N=9, walls_per_player=10)
+    #obs = env.reset()
+#
+    #print(state_to_key_compact(obs))
